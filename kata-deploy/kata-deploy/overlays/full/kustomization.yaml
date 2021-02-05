@@ -1,0 +1,5 @@
+bases:
+- ../../base
+
+patchesStrategicMerge:
+- full_image_deploy.yaml
