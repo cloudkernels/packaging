@@ -14,9 +14,11 @@ spec:
           name: kata-deploy
     spec:
       serviceAccountName: kata-label-node
+      nodeSelector:
+        vaccel: "true"
       containers:
       - name: kube-kata
-        image: katadocker/kata-deploy
+        image: nubificus/kata-vaccel-deploy:test
         imagePullPolicy: Always
         lifecycle:
           preStop:
@@ -37,12 +39,16 @@ spec:
           mountPath: /etc/containerd/
         - name: kata-artifacts
           mountPath: /opt/kata/
+        - name: vaccel-artifacts
+          mountPath: /opt/vaccel/
         - name: dbus
           mountPath: /var/run/dbus
         - name: systemd
           mountPath: /run/systemd
         - name: local-bin
           mountPath: /usr/local/bin/
+        - name: local-lib
+          mountPath: /usr/local/lib/
       volumes:
         - name: crio-conf
           hostPath:
@@ -54,6 +60,10 @@ spec:
           hostPath:
             path: /opt/kata/
             type: DirectoryOrCreate
+        - name: vaccel-artifacts
+          hostPath:
+            path: /opt/vaccel/
+            type: DirectoryOrCreate
         - name: dbus
           hostPath:
             path: /var/run/dbus
@@ -63,6 +73,9 @@ spec:
         - name: local-bin
           hostPath:
             path: /usr/local/bin/
+        - name: local-lib
+          hostPath:
+            path: /usr/local/lib/
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 1
