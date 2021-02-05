@@ -27,6 +27,8 @@ spec:
           requests:
             cpu: 200m
       restartPolicy: Always
+      nodeSelector:
+        vaccel: "true"
 ---
 apiVersion: v1
 kind: Service
