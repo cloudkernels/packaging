@@ -1,0 +1,36 @@
+FROM centos/systemd
+ARG KUBE_ARCH=amd64
+ARG RELEASE=0.0.1
+ARG KATA_ARTIFACTS=./kata-vaccel.tar.xz
+ARG KATA_ARTIFACTS_URL=https://github.com/nubificus/docs/releases/download/${RELEASE}/kata-vaccel.tar.xz
+ARG KATA_DESTINATION=/opt/kata-artifacts
+ARG VACCEL_DESTINATION=/opt/vaccel-artifacts
+
+#install kata artifacts to container image
+RUN \
+yum install -y epel-release && \
+yum install -y bzip2 jq wget && \
+mkdir -p ${KATA_DESTINATION} && \
+wget ${KATA_ARTIFACTS_URL} && \ 
+tar xvf ${KATA_ARTIFACTS} -C ${KATA_DESTINATION}/ && \
+chown -R root:root ${KATA_DESTINATION}/
+
+#Download and install vAccel artifacts to container image
+COPY vaccel-scripts/vaccel-download.sh .
+RUN \
+yum install -y dialog && \
+mkdir -p ${VACCEL_DESTINATION} && \
+./vaccel-download.sh ${VACCEL_DESTINATION} && \
+chown -R root:root ${VACCEL_DESTINATION}/
+
+
+RUN \
+curl -Lso /bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/${KUBE_ARCH}/kubectl && \
+chmod +x /bin/kubectl
+
+COPY scripts ${KATA_DESTINATION}/scripts
+COPY vaccel-scripts ${VACCEL_DESTINATION}/scripts
+RUN \
+ln -s ${KATA_DESTINATION}/scripts/kata-deploy-docker.sh /usr/bin/kata-deploy-docker && \
+ln -s ${KATA_DESTINATION}/scripts/kata-deploy.sh /usr/bin/kata-deploy && \
+ln -s ${VACCEL_DESTINATION}/scripts/vaccel-deploy.sh /usr/bin/vaccel-deploy

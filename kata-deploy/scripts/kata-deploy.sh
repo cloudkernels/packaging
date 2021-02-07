@@ -15,9 +15,9 @@ containerd_conf_file_backup="${containerd_conf_file}.bak"
 
 shims=(
 	"fc"
-	"qemu"
-	"qemu-virtiofs"
-	"clh"
+	#"qemu"
+	#"qemu-virtiofs"
+	#"clh"
 )
 
 # If we fail for any reason a message will be displayed
@@ -52,6 +52,7 @@ function install_artifacts() {
 	echo "copying kata artifacts onto host"
 	cp -a /opt/kata-artifacts/opt/kata/* /opt/kata/
 	chmod +x /opt/kata/bin/*
+	vaccel-deploy install
 }
 
 function configure_cri_runtime() {
@@ -61,6 +62,7 @@ function configure_cri_runtime() {
 		;;
 	containerd | k3s | k3s-agent)
 		configure_containerd
+		vaccel-deploy configure
 		;;
 	esac
 	systemctl daemon-reload
@@ -231,6 +233,7 @@ EOT
 
 function remove_artifacts() {
 	echo "deleting kata artifacts"
+	vaccel-deploy cleanup
 	rm -rf /opt/kata/
 }
 
