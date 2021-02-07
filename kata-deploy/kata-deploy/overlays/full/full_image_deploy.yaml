@@ -8,4 +8,4 @@ spec:
     spec:
       containers:
         - name: kube-kata
-          image: nubificus/kata-vaccel-all-deploy:test
+          image: nubificus/kata-vaccel-all-deploy:0.0.1
