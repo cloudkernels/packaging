@@ -1,0 +1,22 @@
+FROM ubuntu:latest as vaccel
+
+ENV DEBIAN_FRONTEND="noninteractive"
+
+RUN apt-get update && apt-get install -y wget unzip
+
+RUN wget https://github.com/cloudkernels/vaccel/releases/download/latest/vaccel_x86_64_Release.zip && \
+    unzip vaccel_x86_64_Release.zip -d /vaccel
+
+FROM debian:buster-slim
+
+COPY --from=vaccel /vaccel/bin/classify /bin/
+COPY --from=vaccel /vaccel/lib/libvaccel-vsock.so /lib/
+COPY --from=vaccel /vaccel/lib/libvaccel-virtio.so /lib/
+COPY --from=vaccel /vaccel/lib/libvaccel.so /lib/
+COPY images/. /images/
+
+RUN chmod +x /bin/classify
+
+ENV VACCEL_BACKENDS=/lib/libvaccel-vsock.so 
+ENV VACCEL_DEBUG_LEVEL=4
+CMD ["sleep", "infinity"]

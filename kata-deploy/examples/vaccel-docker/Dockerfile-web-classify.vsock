@@ -1,0 +1,56 @@
+FROM ubuntu:latest as vaccel-release
+
+ENV DEBIAN_FRONTEND="noninteractive"
+
+RUN apt-get update && apt-get install -y wget unzip
+
+RUN wget https://github.com/cloudkernels/vaccel/releases/download/latest/vaccel_x86_64_Release.zip && \
+    unzip vaccel_x86_64_Release.zip -d /vaccel
+
+FROM rust:1.43 as builder
+
+ENV PKG_CONFIG_PATH=/usr/local/share
+
+COPY --from=vaccel-release /vaccel/lib/libvaccel* /usr/local/lib/
+COPY --from=vaccel-release /vaccel/include/. /usr/local/include/
+COPY --from=vaccel-release /vaccel/share/vaccel.pc /usr/local/share/
+
+RUN apt-get update && apt-get install -y \
+        clang \
+        libclang-dev \
+        llvm-dev
+
+RUN git clone https://github.com/cloudkernels/web-classify.git
+WORKDIR ./web-classify
+RUN cargo build --release
+RUN rm src/*.rs
+
+FROM debian:buster-slim
+ARG APP=/usr/src/app
+
+RUN apt-get update \
+    && apt-get install -y ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 3030
+
+ENV TZ=Etc/UTC \
+    APP_USER=appuser
+
+RUN groupadd $APP_USER \
+    && useradd -g $APP_USER $APP_USER \
+    && mkdir -p ${APP}
+
+COPY --from=builder /web-classify/target/release/web-classify ${APP}/web-classify
+COPY --from=vaccel-release /vaccel/lib/libvaccel.so /lib/
+COPY --from=vaccel-release /vaccel/lib/libvaccel-vsock.so /lib/
+
+RUN chown -R $APP_USER:$APP_USER ${APP}
+
+USER $APP_USER
+WORKDIR ${APP}
+
+ENV VACCEL_BACKENDS=/lib/libvaccel-vsock.so 
+ENV VACCEL_DEBUG_LEVEL=4
+ENV RUST_LOG=debug
+CMD ["./web-classify"]
