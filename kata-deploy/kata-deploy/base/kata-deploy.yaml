@@ -18,7 +18,7 @@ spec:
         vaccel: "true"
       containers:
       - name: kube-kata
-        image: nubificus/kata-vaccel-deploy:0.0.1
+        image: nubificus/vaccel-kata:debug
         imagePullPolicy: Always
         lifecycle:
           preStop:

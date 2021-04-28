@@ -15,6 +15,8 @@ containerd_conf_file_backup="${containerd_conf_file}.bak"
 
 shims=(
 	"fc"
+	"fc-vaccel"
+	"fc-vaccel-virtio"
 	#"qemu"
 	#"qemu-virtiofs"
 	#"clh"
@@ -62,7 +64,6 @@ function configure_cri_runtime() {
 		;;
 	containerd | k3s | k3s-agent)
 		configure_containerd
-		vaccel-deploy configure
 		;;
 	esac
 	systemctl daemon-reload

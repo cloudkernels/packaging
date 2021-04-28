@@ -52,8 +52,9 @@ function install_artifacts() {
 	fi
 
 	echo "Installing vAccel runtime to host"
-	# Hypervisor (Firecracker) is linked against Vaccel Runtime
-	# Create a link to libvaccel.so in a systems runtime library path (usr/local/lib)
+	# Hypervisor (Firecracker vAccel Virtio) and vaccelrt-agent binaries are linked
+	# against Vaccel Runtime. Create a link to libvaccel.so in a systems runtime
+	# library path (usr/local/lib)
 	local libvaccel_link="/usr/local/lib/libvaccel.so"
 	if [ -L "${libvaccel_link}" ]; then
 		echo "warning: /usr/local/lib/libvaccel.so already exists"

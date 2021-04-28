@@ -1,0 +1,60 @@
+FROM ubuntu:latest as artifacts
+
+ENV DEBIAN_FRONTEND="noninteractive"
+
+ARG KATA_RELEASE=2.1.0-alpha2
+ARG VACCEL_RELEASE=latest
+
+ARG KATA_ARTIFACTS_URL=https://github.com/kata-containers/kata-containers/releases/download/${KATA_RELEASE}/kata-static-${KATA_RELEASE}-x86_64.tar.xz
+ARG VACCEL_ARTIFACTS_URL=https://github.com/cloudkernels/vaccel/releases/download/${VACCEL_RELEASE}/vaccel_x86_64_Release.zip
+
+RUN apt-get update && apt-get install -y wget unzip xz-utils
+
+RUN wget ${KATA_ARTIFACTS_URL} && \
+    wget ${VACCEL_ARTIFACTS_URL} && \
+    unzip vaccel_x86_64_Release.zip -d /vaccel && \
+    mkdir /kata && \
+    tar xvf kata-static-${KATA_RELEASE}-x86_64.tar.xz -C /kata
+
+FROM centos/systemd
+ARG KUBE_ARCH=amd64
+ARG RELEASE=0.0.1
+ARG KATA_DESTINATION=/opt/kata-artifacts
+ARG VACCEL_DESTINATION=/opt/vaccel-artifacts
+
+#Download and install vAccel artifacts to container image
+COPY --from=artifacts /vaccel/bin/firecracker ${VACCEL_DESTINATION}/bin/firecracker-vaccel
+COPY --from=artifacts /vaccel/bin/vaccelrt-agent ${VACCEL_DESTINATION}/bin/
+COPY --from=artifacts /vaccel/lib/libvaccel-jetson.so ${VACCEL_DESTINATION}/lib/
+COPY --from=artifacts /vaccel/lib/libvaccel-noop.so ${VACCEL_DESTINATION}/lib/
+COPY --from=artifacts /vaccel/lib/libvaccel.so ${VACCEL_DESTINATION}/lib/
+COPY --from=artifacts /kata/. ${KATA_DESTINATION}/
+COPY containerd-shim-kata-v2.vaccel ${KATA_DESTINATION}/opt/kata/bin/containerd-shim-kata-v2
+COPY kata-containers-image_ubuntu_virtio-accel-5.4.60-92 ${KATA_DESTINATION}/opt/kata/share/kata-containers/
+COPY vmlinux-virtio-accel-5.4.60-92 ${KATA_DESTINATION}/opt/kata/share/kata-containers/
+COPY configuration-fc-vaccel.toml ${KATA_DESTINATION}/opt/kata/share/defaults/kata-containers/
+COPY configuration-fc-vaccel-virtio.toml ${KATA_DESTINATION}/opt/kata/share/defaults/kata-containers/
+
+RUN \
+cd ${KATA_DESTINATION}/opt/kata/share/kata-containers/ && \
+ln -s kata-containers-image_ubuntu_virtio-accel-5.4.60-92 kata-containers-virtio_accel.img && \
+ln -s vmlinux-virtio-accel-5.4.60-92 vmlinux-virtio_accel
+
+RUN chown -R root:root ${KATA_DESTINATION}/
+RUN chown -R root:root ${VACCEL_DESTINATION}/
+
+#Add kubectl binary
+RUN \
+curl -Lso /bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/${KUBE_ARCH}/kubectl && \
+chmod +x /bin/kubectl
+
+#Add vaccel download and deploy scripts to container image
+COPY scripts ${KATA_DESTINATION}/scripts
+COPY vaccel-scripts ${VACCEL_DESTINATION}/scripts
+RUN \
+ln -s ${KATA_DESTINATION}/scripts/kata-deploy.sh /usr/bin/kata-deploy && \
+ln -s ${VACCEL_DESTINATION}/scripts/vaccel-download.sh /usr/bin/vaccel-download && \
+ln -s ${VACCEL_DESTINATION}/scripts/vaccel-deploy.sh /usr/bin/vaccel-deploy
+
+#make sure to inform vaccel-deploy script that artifacts are installed
+RUN touch ${VACCEL_DESTINATION}/.downloaded
