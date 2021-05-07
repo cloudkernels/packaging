@@ -18,7 +18,7 @@ spec:
         vaccel: "true"
       containers:
       - name: kube-kata
-        image: nubificus/vaccel-kata:debug
+        image: nubificus/vaccel-kata:test
         imagePullPolicy: Always
         lifecycle:
           preStop:
@@ -26,6 +26,8 @@ spec:
               command: ["bash", "-c", "/opt/kata-artifacts/scripts/kata-deploy.sh cleanup"]
         command: [ "bash", "-c", "/opt/kata-artifacts/scripts/kata-deploy.sh install" ]
         env:
+        - name: KATA_INSTALL_PATH
+          value: "/opt/vaccel-kata"
         - name: NODE_NAME
           valueFrom:
             fieldRef:
@@ -38,9 +40,7 @@ spec:
         - name: containerd-conf
           mountPath: /etc/containerd/
         - name: kata-artifacts
-          mountPath: /opt/kata/
-        - name: vaccel-artifacts
-          mountPath: /opt/vaccel/
+          mountPath: /opt/vaccel-kata/
         - name: dbus
           mountPath: /var/run/dbus
         - name: systemd
@@ -58,11 +58,7 @@ spec:
             path: /etc/containerd/
         - name: kata-artifacts
           hostPath:
-            path: /opt/kata/
-            type: DirectoryOrCreate
-        - name: vaccel-artifacts
-          hostPath:
-            path: /opt/vaccel/
+            path: /opt/vaccel-kata/
             type: DirectoryOrCreate
         - name: dbus
           hostPath:

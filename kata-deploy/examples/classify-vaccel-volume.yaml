@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: classify-kata-fc-virtio
+  name: classify-kata-fc-virtio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: classify-kata-fc
+  template:
+    metadata:
+      labels:
+        run: classify-kata-fc
+        vaccel: labeled
+      annotations:
+        vaccelback: noop
+    spec:
+      runtimeClassName: kata-fc-vaccel-virtio
+      containers:
+      - image: nubificus/classify-example:debug
+        imagePullPolicy: Always
+        name: classify
+        resources:
+          requests:
+            cpu: 200m
+        volumeMounts:
+          - name: podinfo
+            mountPath: /etc/podinfo
+      restartPolicy: Always
+      nodeSelector:
+        vaccel: "true"
+      volumes:
+        - name: podinfo
+          downwardAPI:
+            items:
+              - path: "labels"
+                fieldRef:
+                  fieldPath: metadata.labels
+              - path: "annotations"
+                fieldRef:
+                  fieldPath: metadata.annotations
